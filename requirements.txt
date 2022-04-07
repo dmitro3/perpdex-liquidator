@@ -1,0 +1,6 @@
+pytest
+pytest-asyncio
+pytest-mock
+PyYAML==6.0
+web3==5.28.0
+git+https://github.com/bevy/redis-namespace.git@38c01cd636e0a85c4a3061683f49a01816fb4c91
