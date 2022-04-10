@@ -114,12 +114,3 @@ def get_clearing_house_contract(w3):
     )
 
     return contract
-
-
-def get_account_balance_contract(w3):
-    contract = w3.eth.contract(
-        address=os.environ['ACCOUNT_BALANCE_CONTRACT_ADDRESS'],
-        abi=get_abi_from_file(os.environ['ACCOUNT_BALANCE_CONTRACT_ABI_JSON_FILENAME'])
-    )
-
-    return contract
