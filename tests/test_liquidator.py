@@ -1,19 +1,15 @@
-
-import os
 import pytest
-
 from src.liquidator import Liquidator
 from web3.exceptions import ContractLogicError
-from eth_account import Account
+
+from tests.helper import mock_eth_account
 
 
 class TestLiquidator:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
         # mock Account
-        acct = Account.create('KEYSMASH FJAFJKLDSKF7JKFDJ 1530')
-        mocker.patch.dict(os.environ, {'USER_PRIVATE_KEY': '0' * 32, 'GAS_PRICE': '10'})
-        mocker.patch.object(Account, 'from_key', return_value=acct)
+        mock_eth_account(mocker)
 
         self.liq = Liquidator()
         self.trader = 'trader address'
