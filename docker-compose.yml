@@ -1,6 +1,6 @@
-version: "3"
+version: "3.8"
 services:
-  mumbai-python:
+  py: &py
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,26 +8,23 @@ services:
     volumes:
       - .:/app
     environment:
-      REDIS_URL: redis://mumbai-redis:6379/0
-      WEB3_PROVIDER_URI: https://rpc-mumbai.maticvigil.com
-      WEB3_NETWORK_NAME: mumbai
-      INITIAL_EVENT_BLOCK_NUMBER: 25800000
-      CLEARING_HOUSE_PERPDEX_CONTRACT_ADDRESS: 0x70B48EC7977f9Ceccb94ef8A9DCCf95D08d0A492
-      CLEARING_HOUSE_PERPDEX_CONTRACT_ABI_JSON_FILENAME: abis/IClearingHousePerpdex.json
-      ACCOUNT_BALANCE_CONTRACT_ADDRESS: 0xf8ccCE38c659E5564b7239B56a64c4086310B8b8
-      ACCOUNT_BALANCE_CONTRACT_ABI_JSON_FILENAME: abis/IAccountBalance.json
-      BASE_TOKEN_ADDRESS: 0x0D04D9B1E9b481182565f263dbEBc2279294E68E
-      USER_PRIVATE_KEY: ${USER_PRIVATE_KEY}
-      GAS_PRICE: ${GAS_PRICE:-0}
+      - USER_PRIVATE_KEY
     tty: true
     logging:
       driver: "json-file"
       options:
         max-size: "32m"
     depends_on:
-      mumbai-redis:
+      redis:
         condition: service_started
-  mumbai-redis:
+
+  redis:
     image: redis:6.2.6
     volumes:
       - './config/redis.conf:/usr/local/etc/redis/redis.conf:ro'
+
+  py-mumbai:
+    <<: *py
+    env_file:
+      - .env.mumbai
+ 
