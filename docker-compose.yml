@@ -1,0 +1,30 @@
+version: "3.8"
+services:
+  py: &py
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - USER_PRIVATE_KEY
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "32m"
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:6.2.6
+    volumes:
+      - './config/redis.conf:/usr/local/etc/redis/redis.conf:ro'
+
+  py-mumbai:
+    <<: *py
+    env_file:
+      - .env.mumbai
+ 
