@@ -189,3 +189,12 @@ def get_perpdex_market_addresses(w3):
         addresses.append(ret['address'])
         filepaths.append(filepath)
     return addresses, filepaths
+
+
+def get_perpdex_market_address(w3, filename):
+    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    filepath = os.path.join(dirpath, filename)
+    with open(filepath) as f:
+        ret = json.load(f)
+    
+    return ret['address']
