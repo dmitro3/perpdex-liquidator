@@ -1,19 +1,19 @@
 import os
 import pytest
 
-from src.event_indexer import ClearingHouseEventIndexer
-from src.liquidator import get_clearing_house_contract, get_w3
+from src.event_indexer import PerpdexEventIndexer
+from src.liquidator import get_perpdex_exchange_contract, get_w3
 
 
-class TestClearingHouseEventIndexer:
+class TestPerpdexEventIndexer:
     @pytest.fixture(autouse=True)
     def setUp(self):
         w3 = get_w3(
             network_name=os.environ['WEB3_NETWORK_NAME'],
             web3_provider_uri=os.environ['WEB3_PROVIDER_URI']
         )
-        self._indexer = ClearingHouseEventIndexer(
-            contract=get_clearing_house_contract(w3),
+        self._indexer = PerpdexEventIndexer(
+            contract=get_perpdex_exchange_contract(w3),
         )
         self._indexer._redis_client.flushdb()
 
@@ -40,16 +40,12 @@ class TestClearingHouseEventIndexer:
         assert mocked.call_count == 1
 
     def test_process_event(self, mocker):
-        event1 = {'event': 'LiquidityChanged', 'args': {'baseToken': '0x1234-0', 'maker': '0xabcd-0'}}
-        event2 = {'event': 'PositionChanged', 'args': {'baseToken': '0x1234-1', 'taker': '0xabcd-1'}}
-        event3 = {'event': 'NotTargetEvent', 'args': {'baseToken': '0x1234-2', 'taker': '0xabcd-2'}}
-        for event in [event1, event2, event3]:
+        event1 = {'event': 'PositionChanged', 'args': {'market': '0x1234-1', 'trader': '0xabcd-1'}}
+        event2 = {'event': 'NotTargetEvent', 'args': {'market': '0x1234-2', 'trader': '0xabcd-2'}}
+        for event in [event1, event2]:
             self._indexer._process_event(event)
 
-        assert event1['args']['baseToken'] in self._indexer.base_token_to_traders
-        assert event1['args']['maker'] in self._indexer.base_token_to_traders[event1['args']['baseToken']]
+        assert event1['args']['market'] in self._indexer.market_to_traders
+        assert event1['args']['trader'] in self._indexer.market_to_traders[event1['args']['market']]
 
-        assert event2['args']['baseToken'] in self._indexer.base_token_to_traders
-        assert event2['args']['taker'] in self._indexer.base_token_to_traders[event2['args']['baseToken']]
-
-        assert event3['args']['baseToken'] not in self._indexer.base_token_to_traders
+        assert event2['args']['market'] not in self._indexer.market_to_traders
