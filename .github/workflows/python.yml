@@ -22,4 +22,4 @@ jobs:
       working-directory: ./
       run: |
         docker-compose run --rm py-shibuya python -m pytest tests
-        docker-compose run --rm py-shibuya python -m pytest tests-testnet
+        # TODO: docker-compose run --rm py-shibuya python -m pytest tests-testnet
