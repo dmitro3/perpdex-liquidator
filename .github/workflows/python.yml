@@ -10,6 +10,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+        submodules: recursive
 
     - name: Lint with flake8
       run: |
