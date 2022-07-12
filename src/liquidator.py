@@ -12,6 +12,8 @@ from web3.middleware import (construct_sign_and_send_raw_middleware,
 
 from src.event_indexer import PerpdexEventIndexer
 
+MAX_UINT: int = int(web3.constants.MAX_INT, base=16)
+
 
 class Liquidator:
     def __init__(self, logger=None) -> None:
@@ -83,28 +85,29 @@ class Liquidator:
 
     def _liquidate_taker_position(self, trader, market):
         base_share = self._perpdex_exchange.functions.getOpenPositionShare(trader, market).call()
+        is_short = base_share > 0
         max_trade = self._perpdex_exchange.functions.maxTrade(dict(
             trader=trader,
             market=market,
             caller=self._user_account.address,
-            is_base_to_quote=base_share > 0,
-            is_exact_input=True,
+            isBaseToQuote=is_short,
+            isExactInput=is_short,  # same as isBaseToQuote
         )).call()
 
         # try liquidate
         reduction_rate = 0.8
-        amount = max(
-            base_share,
+        amount = min(
+            abs(base_share),
             max_trade * reduction_rate,
         )
         func = self._perpdex_exchange.functions.trade(dict(
             trader=trader,
             market=market,
-            is_base_to_quote=base_share > 0,
-            is_exact_input=True,
+            isBaseToQuote=is_short,
+            isExactInput=is_short,
             amount=amount,
-            oppositeAmountBound=0,
-            deadline=int(web3.constants.MAX_INT, base=16),
+            oppositeAmountBound=0 if is_short else MAX_UINT,
+            deadline=MAX_UINT,
         ))
 
         gas = self._try_estimate_gas(func)
@@ -126,17 +129,16 @@ class Liquidator:
             self._logger.debug(f'estimateGas raises {e=}')
             return
    
-    def _try_transact(self, func, options: dict = {}):
+    def _try_transact(self, func, options: dict = {}) -> bool:
         try:
             tx_hash = func.transact(options)
         except web3.exceptions.ContractLogicError as e:
             self._logger.debug(f'transaction reverted. {e=}')
             return False
 
-        if self._wait_transaction_receipt(tx_hash, times=10):
-            return True
+        return self._wait_transaction_receipt(tx_hash, times=10)
 
-    def _wait_transaction_receipt(self, tx_hash, times):
+    def _wait_transaction_receipt(self, tx_hash, times) -> bool:
         self._logger.info(f"tx_hash:{self._w3.toHex(tx_hash)}")
         for i in range(times):
             try:
@@ -191,7 +193,7 @@ def get_perpdex_market_addresses(w3):
     return addresses, filepaths
 
 
-def get_perpdex_market_address(w3, filename):
+def get_perpdex_market_address(filename):
     dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
     filepath = os.path.join(dirpath, filename)
     with open(filepath) as f:
