@@ -24,11 +24,6 @@ services:
     volumes:
       - './config/redis.conf:/usr/local/etc/redis/redis.conf:ro'
 
-  py-shibuya:
-    <<: *py
-    env_file:
-      - .env.shibuya
- 
   py-hardhat:
     <<: *py
     environment:
