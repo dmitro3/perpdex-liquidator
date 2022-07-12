@@ -10,6 +10,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+        submodules: recursive
 
     - name: Lint with flake8
       run: |
@@ -21,5 +24,5 @@ jobs:
     - name: Run tests
       working-directory: ./
       run: |
-        docker-compose run --rm py-mumbai python -m pytest tests
-        docker-compose run --rm py-mumbai python -m pytest tests-testnet
+        docker-compose run --rm py-shibuya python -m pytest tests
+        # TODO: docker-compose run --rm py-shibuya python -m pytest tests-testnet

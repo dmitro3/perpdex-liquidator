@@ -9,6 +9,7 @@ services:
       - .:/app
     environment:
       - USER_PRIVATE_KEY
+      - REDIS_URL=redis://redis:6379/0
     tty: true
     logging:
       driver: "json-file"
@@ -23,8 +24,9 @@ services:
     volumes:
       - './config/redis.conf:/usr/local/etc/redis/redis.conf:ro'
 
-  py-mumbai:
+  py-shibuya:
     <<: *py
     env_file:
-      - .env.mumbai
+      - .env.shibuya
+ 
  

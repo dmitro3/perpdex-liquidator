@@ -95,23 +95,23 @@ class EventIndexer:
         raise NotImplementedError
 
 
-class ClearingHouseEventIndexer(EventIndexer):
-    # - key: base_token
-    # - value: list of traders
-    base_token_to_traders = defaultdict(set)
+class PerpdexEventIndexer(EventIndexer):
+    # - key: market address
+    # - value: set of trader address
+    market_to_traders = defaultdict(set)
 
-    def fetch_base_token_to_traders(self):
+    def fetch_market_to_traders(self):
         self._fetch_events()
-        return self.base_token_to_traders
+        return self.market_to_traders
 
     def _process_event(self, event: web3.datastructures.AttributeDict):
         event_name = event['event']
         args = event['args']
         self._logger.debug(f'{event_name=} {args=}')
-        if event_name == 'LiquidityChanged':
-            self.base_token_to_traders[args['baseToken']].add(args['maker'])
-        elif event_name == 'PositionChanged':
-            self.base_token_to_traders[args['baseToken']].add(args['taker'])
+        if event_name == 'PositionChanged':
+            self.market_to_traders[args['market']].add(args['trader'])
+        elif event_name == 'AddLiquidity':
+            self.market_to_traders[args['market']].add(args['trader'])
 
 
 def _floor_int(a, b, remainder):

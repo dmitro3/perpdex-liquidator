@@ -16,7 +16,7 @@ loggers:
     handlers: [stream]
     level: INFO
     propagate: false
-  ClearingHouseEventIndexer:
+  PerpdexEventIndexer:
     handlers: [stream]
     level: INFO
     propagate: false

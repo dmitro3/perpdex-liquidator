@@ -13,89 +13,69 @@ class TestLiquidator:
 
         self.liq = Liquidator()
         self.trader = 'trader address'
-        self.base_token = 'base token address'
+        self.market = 'base token address'
+    
+    @pytest.mark.asyncio
+    async def test_liquidate_skip(self, mocker):
+        mocker.patch.object(self.liq, '_check_trader_has_enough_mm', return_value=True)
+        mocker.patch.object(self.liq, '_liquidate_maker_position')
+        mocker.patch.object(self.liq, '_liquidate_taker_position')
 
-    def test_is_executable_ok(self, mocker):
-        mocked_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_func,
-            'estimateGas',
-            return_value=10000)
-        assert self.liq._is_executable(mocked_func) is True
+        await self.liq._liquidate(self.trader, self.market)
 
-    def test_is_executable_ng(self, mocker):
-        mocked_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_func,
-            'estimateGas',
-            side_effect=ContractLogicError('execution reverted'))
-        assert self.liq._is_executable(mocked_func) is False
+        self.liq._liquidate_maker_position.assert_not_called()
+        self.liq._liquidate_taker_position.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_liquidate_executed(self, mocker):
-        # mock _try_transact
-        mocker.patch.object(self.liq, '_try_transact')
+        mocker.patch.object(self.liq, '_check_trader_has_enough_mm', return_value=False)
+        mocker.patch.object(self.liq, '_liquidate_maker_position')
+        mocker.patch.object(self.liq, '_liquidate_taker_position')
 
-        # mock cancelAllExcessOrders estimateGas to return gas
-        mocked_clearing_house = mocker.patch.object(self.liq, '_clearing_house')
-        mocked_cancelAllExcessOrders_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_clearing_house.functions,
-            'cancelAllExcessOrders',
-            return_value=mocked_cancelAllExcessOrders_func)
-        mocker.patch.object(
-            mocked_cancelAllExcessOrders_func,
-            'estimateGas',
-            return_value=10000)
+        await self.liq._liquidate(self.trader, self.market)
 
-        # mock liquidate estimateGas to return gas
-        mocked_liquidate_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_clearing_house.functions,
-            'liquidate',
-            return_value=mocked_liquidate_func)
-        mocker.patch.object(
-            mocked_liquidate_func,
-            'estimateGas',
-            return_value=10000)
+        self.liq._liquidate_maker_position.assert_called()
+        self.liq._liquidate_taker_position.assert_called()
+    
+    def test_liquidate_maker_position_ok(self, mocker):
+        contract = self.liq._perpdex_exchange.functions
 
-        await self.liq._liquidate(self.trader, self.base_token)
+        # mock getMakerInfo to return liquidity 10
+        func1 = mocker.MagicMock()
+        func1.call.return_value = (10, 0, 0)
+        mocker.patch.object(contract, 'getMakerInfo', return_value=func1)
 
-        # assert liquidate transact called
-        self.liq._try_transact.assert_called_with(
-            mocked_liquidate_func,
-            options={'from': self.liq._user_account.address, 'gasPrice': self.liq._gas_price}
-        )
+        # mock removeLiquidity
+        func2 = mocker.MagicMock()
+        func2.estimateGas.return_value = 100
+        mocker.patch.object(contract, 'removeLiquidity', return_value=func2)
 
-    @pytest.mark.asyncio
-    async def test_liquidate_skiped(self, mocker):
-        # mock _try_transact
-        mocker.patch.object(self.liq, '_try_transact')
+        # mock transact to return True
+        mocker.patch.object(self.liq, '_try_transact', return_value=True)
 
-        # mock cancelAllExcessOrders estimateGas to raise revert error
-        mocked_clearing_house = mocker.patch.object(self.liq, '_clearing_house')
-        mocked_cancelAllExcessOrders_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_clearing_house.functions,
-            'cancelAllExcessOrders',
-            return_value=mocked_cancelAllExcessOrders_func)
-        mocker.patch.object(
-            mocked_cancelAllExcessOrders_func,
-            'estimateGas',
-            side_effect=ContractLogicError('execution reverted: CH_NEXO'))
+        ret = self.liq._liquidate_maker_position(self.trader, self.market)
+        assert ret is True
 
-        # mock liquidate estimateGas to raise revert error
-        mocked_liquidate_func = mocker.MagicMock()
-        mocker.patch.object(
-            mocked_clearing_house.functions,
-            'liquidate',
-            return_value=mocked_liquidate_func)
-        mocker.patch.object(
-            mocked_liquidate_func,
-            'estimateGas',
-            side_effect=ContractLogicError('execution reverted'))
+    def test_liquidate_taker_position_ok(self, mocker):
+        contract = self.liq._perpdex_exchange.functions
 
-        await self.liq._liquidate(self.trader, self.base_token)
+        # mock getOpenPositionShare
+        func1 = mocker.MagicMock()
+        func1.call.return_value = 100
+        mocker.patch.object(contract, 'getOpenPositionShare', return_value=func1)
 
-        # assert liquidate transact not called
-        assert self.liq._try_transact.call_count == 0
+        # mock maxTrade
+        func2 = mocker.MagicMock()
+        func2.call.return_value = 80
+        mocker.patch.object(contract, 'maxTrade', return_value=func2)
+
+        # mock trade
+        func3 = mocker.MagicMock()
+        func3.estimateGas.return_value = 100
+        mocker.patch.object(contract, 'trade', return_value=func3)
+
+        # mock transact to return True
+        mocker.patch.object(self.liq, '_try_transact', return_value=True)
+
+        ret = self.liq._liquidate_taker_position(self.trader, self.market)
+        assert ret is True
