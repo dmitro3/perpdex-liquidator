@@ -21,10 +21,9 @@ class Liquidator:
 
         self._w3 = get_w3(
             network_name=os.environ['WEB3_NETWORK_NAME'],
-            web3_provider_uri=os.environ['WEB3_PROVIDER_URI']
+            web3_provider_uri=os.environ['WEB3_PROVIDER_URI'],
+            user_private_key=os.environ['USER_PRIVATE_KEY'],
         )
-        self._user_account = Account().from_key(os.environ['USER_PRIVATE_KEY'])
-        self._w3.middleware_onion.add(construct_sign_and_send_raw_middleware(self._user_account))
 
         self._perpdex_exchange = get_perpdex_exchange_contract(self._w3)
         self._perpdex_exchange_event_indexer = PerpdexEventIndexer(
@@ -75,7 +74,7 @@ class Liquidator:
                 self._logger.debug(f"RemoveLiquidity failed in estimation stage. {trader=}, {market=}")
                 return False
 
-            ret = self._try_transact(func, options={'from': self._user_account.address, 'gasPrice': gas})
+            ret = self._try_transact(func, options={'gasPrice': gas})
             if ret:
                 self._logger.debug("RemoveLiquidity suceeded.")
                 return True
@@ -89,7 +88,7 @@ class Liquidator:
         max_trade = self._perpdex_exchange.functions.maxTrade(dict(
             trader=trader,
             market=market,
-            caller=self._user_account.address,
+            caller=self._w3.eth.default_account,
             isBaseToQuote=is_short,
             isExactInput=is_short,  # same as isBaseToQuote
         )).call()
@@ -114,7 +113,7 @@ class Liquidator:
         if gas is None:
             return False
         
-        ret = self._try_transact(func, options={'from': self._user_account.address, 'gasPrice': gas})
+        ret = self._try_transact(func, options={'gasPrice': gas})
         if ret:
             self._logger.debug(f'Liquidation succeeded. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return True
@@ -157,12 +156,16 @@ class Liquidator:
         return False
 
 
-def get_w3(network_name, web3_provider_uri):
+def get_w3(network_name: str, web3_provider_uri: str, user_private_key: str = None):
     w3 = Web3(Web3.HTTPProvider(web3_provider_uri))
 
     if network_name in ['mumbai']:
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
+    if user_private_key is not None:
+        user_account = Account().from_key(user_private_key)
+        w3.eth.default_account = user_account.address
+        w3.middleware_onion.add(construct_sign_and_send_raw_middleware(user_account))
     return w3
 
 
