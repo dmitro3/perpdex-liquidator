@@ -1,11 +1,10 @@
 import pytest
 from src.liquidator import Liquidator
-from web3.exceptions import ContractLogicError
 
 from tests.helper import mock_eth_account
 
 
-class TestLiquidator:
+class TestLiquidatorWithoutDependencies:
     @pytest.fixture(autouse=True)
     def setUp(self, mocker):
         # mock Account
@@ -79,3 +78,14 @@ class TestLiquidator:
 
         ret = self.liq._liquidate_taker_position(self.trader, self.market)
         assert ret is True
+
+
+class TestLiquidatorWithDependencies:
+    def set_trader_open_long_position(self):
+        pass
+
+    def set_trader_liquidatable(self):
+        pass
+
+    def test_liqudate(self):
+        pass
