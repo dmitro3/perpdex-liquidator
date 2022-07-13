@@ -43,6 +43,8 @@ class Liquidator:
                 for trader in traders:
                     asyncio.create_task(self._liquidate(trader, market))
 
+            await asyncio.sleep(1)
+
     async def _liquidate(self, trader, market):
         # check mm
         ret = self._check_trader_has_enough_mm(trader)
@@ -76,7 +78,7 @@ class Liquidator:
                 self._logger.debug(f"RemoveLiquidity failed in estimation stage. {trader=}, {market=}")
                 return False
 
-            ret = self._try_transact(func, options={'gasPrice': gas})
+            ret = self._try_transact(func)
             if ret:
                 self._logger.debug("RemoveLiquidity suceeded.")
                 return True
@@ -115,7 +117,7 @@ class Liquidator:
         if gas is None:
             return False
         
-        ret = self._try_transact(func, options={'gasPrice': gas})
+        ret = self._try_transact(func)
         if ret:
             self._logger.debug(f'Liquidation succeeded. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return True
@@ -127,7 +129,7 @@ class Liquidator:
         try:
             return func.estimateGas()
         except Exception as e:
-            self._logger.debug(f'estimateGas raises {e=}')
+            self._logger.debug(f'estimateGas raises {e=}, {func=}')
             return
    
     def _try_transact(self, func, options: dict = {}) -> bool:

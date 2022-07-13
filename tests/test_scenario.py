@@ -164,7 +164,7 @@ async def test_liquidate(w3, market_contract, exchange_contract):
         amount=amount,
         oppositeAmountBound=0 if (side_int < 0) else utils.MAX_UINT,
         deadline=utils.MAX_UINT,
-    )).transact({'gasPrice': 1_000_000})
+    )).transact()
     w3.eth.wait_for_transaction_receipt(tx_hash)
 
     # alice mm becomes not enough
@@ -174,10 +174,12 @@ async def test_liquidate(w3, market_contract, exchange_contract):
     pos = _current_position(w3, market_contract, exchange_contract, alice.address)
     assert pos > 0
 
-    # assert liquidation success
+    # start liquidator
     liq = Liquidator()
-    await liq._liquidate(alice.address, market_contract.address)
+    liq.start()
+    await asyncio.sleep(3)
 
+    # assert liquidation success
     pos = _current_position(w3, market_contract, exchange_contract, alice.address)
     assert pos == 0.0
 
