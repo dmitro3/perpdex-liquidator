@@ -5,14 +5,9 @@ import os
 from logging import getLogger
 
 import web3
-from eth_account import Account
-from web3 import Web3
-from web3.middleware import (construct_sign_and_send_raw_middleware,
-                             geth_poa_middleware)
 
+from src.contracts.utils import MAX_UINT, get_contract_from_abi_json, get_w3
 from src.event_indexer import PerpdexEventIndexer
-
-MAX_UINT: int = int(web3.constants.MAX_INT, base=16)
 
 
 class Liquidator:
@@ -31,8 +26,15 @@ class Liquidator:
         )
 
         self._gas_price = os.environ['GAS_PRICE']
+        self._task: asyncio.Task = None
+        
+    def health_check(self) -> bool:
+        return not self._task.done()
 
-    async def main(self):
+    def start(self):
+        self._task = asyncio.create_task(self._main())
+
+    async def _main(self):
         self._logger.info('Start liquidator')
         while True:
             market_to_traders = self._perpdex_exchange_event_indexer.fetch_market_to_traders()
@@ -118,7 +120,7 @@ class Liquidator:
             self._logger.debug(f'Liquidation succeeded. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return True
         else:
-            self._logger.debug(f'Liquidation failed. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
+            self._logger.debug(f'Liquidation failed. {gas=}, {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return False
     
     def _try_estimate_gas(self, func) -> int:
@@ -132,7 +134,7 @@ class Liquidator:
         try:
             tx_hash = func.transact(options)
         except web3.exceptions.ContractLogicError as e:
-            self._logger.debug(f'transaction reverted. {e=}')
+            self._logger.debug(f'transaction reverted. {e=}, {options=}')
             return False
 
         return self._wait_transaction_receipt(tx_hash, times=10)
@@ -156,35 +158,14 @@ class Liquidator:
         return False
 
 
-def get_w3(network_name: str, web3_provider_uri: str, user_private_key: str = None):
-    w3 = Web3(Web3.HTTPProvider(web3_provider_uri))
-
-    if network_name in ['mumbai']:
-        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-    if user_private_key is not None:
-        user_account = Account().from_key(user_private_key)
-        w3.eth.default_account = user_account.address
-        w3.middleware_onion.add(construct_sign_and_send_raw_middleware(user_account))
-    return w3
-
-
 def get_perpdex_exchange_contract(w3):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     filepath = os.path.join(dirpath, 'PerpdexExchange.json')
-    with open(filepath) as f:
-        ret = json.load(f)
-
-    contract = w3.eth.contract(
-        address=ret['address'],
-        abi=ret['abi'],
-    )
-
-    return contract
+    return get_contract_from_abi_json(w3, filepath)
 
 
 def get_perpdex_market_addresses(w3):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     searchpath = os.path.join(dirpath, 'PerpdexMarket*.json')
     addresses = []
     filepaths = []
@@ -197,7 +178,7 @@ def get_perpdex_market_addresses(w3):
 
 
 def get_perpdex_market_address(filename):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     filepath = os.path.join(dirpath, filename)
     with open(filepath) as f:
         ret = json.load(f)

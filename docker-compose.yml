@@ -33,7 +33,7 @@ services:
       - WEB3_NETWORK_NAME=localhost
       - INITIAL_EVENT_BLOCK_NUMBER=0
       - GAS_PRICE=10
-      - PERPDEX_ABI_JSON_DIRPATH=/app/hardhat/deployments/localhost/
+      - PERPDEX_CONTRACT_ABI_JSON_DIRPATH=/app/hardhat/deployments/localhost/
     depends_on:
       redis:
         condition: service_started

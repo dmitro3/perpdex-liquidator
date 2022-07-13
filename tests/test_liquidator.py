@@ -78,14 +78,3 @@ class TestLiquidatorWithoutDependencies:
 
         ret = self.liq._liquidate_taker_position(self.trader, self.market)
         assert ret is True
-
-
-class TestLiquidatorWithDependencies:
-    def set_trader_open_long_position(self):
-        pass
-
-    def set_trader_liquidatable(self):
-        pass
-
-    def test_liqudate(self):
-        pass
