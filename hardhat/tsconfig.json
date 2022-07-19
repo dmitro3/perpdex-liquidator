@@ -1,0 +1,7 @@
+{
+  "include": ["hardhat.config.ts", "deployments", "deploy"],
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+  }
+}

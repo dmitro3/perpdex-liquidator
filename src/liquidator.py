@@ -5,14 +5,9 @@ import os
 from logging import getLogger
 
 import web3
-from eth_account import Account
-from web3 import Web3
-from web3.middleware import (construct_sign_and_send_raw_middleware,
-                             geth_poa_middleware)
 
+from src.contracts.utils import MAX_UINT, get_contract_from_abi_json, get_w3
 from src.event_indexer import PerpdexEventIndexer
-
-MAX_UINT: int = int(web3.constants.MAX_INT, base=16)
 
 
 class Liquidator:
@@ -21,10 +16,9 @@ class Liquidator:
 
         self._w3 = get_w3(
             network_name=os.environ['WEB3_NETWORK_NAME'],
-            web3_provider_uri=os.environ['WEB3_PROVIDER_URI']
+            web3_provider_uri=os.environ['WEB3_PROVIDER_URI'],
+            user_private_key=os.environ['USER_PRIVATE_KEY'],
         )
-        self._user_account = Account().from_key(os.environ['USER_PRIVATE_KEY'])
-        self._w3.middleware_onion.add(construct_sign_and_send_raw_middleware(self._user_account))
 
         self._perpdex_exchange = get_perpdex_exchange_contract(self._w3)
         self._perpdex_exchange_event_indexer = PerpdexEventIndexer(
@@ -32,8 +26,15 @@ class Liquidator:
         )
 
         self._gas_price = os.environ['GAS_PRICE']
+        self._task: asyncio.Task = None
+        
+    def health_check(self) -> bool:
+        return not self._task.done()
 
-    async def main(self):
+    def start(self):
+        self._task = asyncio.create_task(self._main())
+
+    async def _main(self):
         self._logger.info('Start liquidator')
         while True:
             market_to_traders = self._perpdex_exchange_event_indexer.fetch_market_to_traders()
@@ -41,6 +42,8 @@ class Liquidator:
             for market, traders in market_to_traders.items():
                 for trader in traders:
                     asyncio.create_task(self._liquidate(trader, market))
+
+            await asyncio.sleep(1)
 
     async def _liquidate(self, trader, market):
         # check mm
@@ -75,7 +78,7 @@ class Liquidator:
                 self._logger.debug(f"RemoveLiquidity failed in estimation stage. {trader=}, {market=}")
                 return False
 
-            ret = self._try_transact(func, options={'from': self._user_account.address, 'gasPrice': gas})
+            ret = self._try_transact(func)
             if ret:
                 self._logger.debug("RemoveLiquidity suceeded.")
                 return True
@@ -89,7 +92,7 @@ class Liquidator:
         max_trade = self._perpdex_exchange.functions.maxTrade(dict(
             trader=trader,
             market=market,
-            caller=self._user_account.address,
+            caller=self._w3.eth.default_account,
             isBaseToQuote=is_short,
             isExactInput=is_short,  # same as isBaseToQuote
         )).call()
@@ -114,26 +117,26 @@ class Liquidator:
         if gas is None:
             return False
         
-        ret = self._try_transact(func, options={'from': self._user_account.address, 'gasPrice': gas})
+        ret = self._try_transact(func)
         if ret:
             self._logger.debug(f'Liquidation succeeded. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return True
         else:
-            self._logger.debug(f'Liquidation failed. {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
+            self._logger.debug(f'Liquidation failed. {gas=}, {trader=}, {market=}, {base_share=}, {max_trade=}, {amount=}')
             return False
     
     def _try_estimate_gas(self, func) -> int:
         try:
             return func.estimateGas()
         except Exception as e:
-            self._logger.debug(f'estimateGas raises {e=}')
+            self._logger.debug(f'estimateGas raises {e=}, {func=}')
             return
    
     def _try_transact(self, func, options: dict = {}) -> bool:
         try:
             tx_hash = func.transact(options)
         except web3.exceptions.ContractLogicError as e:
-            self._logger.debug(f'transaction reverted. {e=}')
+            self._logger.debug(f'transaction reverted. {e=}, {options=}')
             return False
 
         return self._wait_transaction_receipt(tx_hash, times=10)
@@ -157,31 +160,14 @@ class Liquidator:
         return False
 
 
-def get_w3(network_name, web3_provider_uri):
-    w3 = Web3(Web3.HTTPProvider(web3_provider_uri))
-
-    if network_name in ['mumbai']:
-        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-    return w3
-
-
 def get_perpdex_exchange_contract(w3):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     filepath = os.path.join(dirpath, 'PerpdexExchange.json')
-    with open(filepath) as f:
-        ret = json.load(f)
-
-    contract = w3.eth.contract(
-        address=ret['address'],
-        abi=ret['abi'],
-    )
-
-    return contract
+    return get_contract_from_abi_json(w3, filepath)
 
 
 def get_perpdex_market_addresses(w3):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     searchpath = os.path.join(dirpath, 'PerpdexMarket*.json')
     addresses = []
     filepaths = []
@@ -194,7 +180,7 @@ def get_perpdex_market_addresses(w3):
 
 
 def get_perpdex_market_address(filename):
-    dirpath = os.environ['PERPDEX_ABI_JSON_DIRPATH']
+    dirpath = os.environ['PERPDEX_CONTRACT_ABI_JSON_DIRPATH']
     filepath = os.path.join(dirpath, filename)
     with open(filepath) as f:
         ret = json.load(f)

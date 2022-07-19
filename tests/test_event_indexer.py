@@ -1,8 +1,14 @@
 import os
-import pytest
+from logging import config
 
+import pytest
+import yaml
 from src.event_indexer import PerpdexEventIndexer
 from src.liquidator import get_perpdex_exchange_contract, get_w3
+
+with open("main_logger_config.yml", encoding='UTF-8') as f:
+    y = yaml.safe_load(f.read())
+    config.dictConfig(y)
 
 
 class TestPerpdexEventIndexer:
@@ -49,3 +55,6 @@ class TestPerpdexEventIndexer:
         assert event1['args']['trader'] in self._indexer.market_to_traders[event1['args']['market']]
 
         assert event2['args']['market'] not in self._indexer.market_to_traders
+
+    def test_smoke(self):
+        self._indexer.fetch_market_to_traders()

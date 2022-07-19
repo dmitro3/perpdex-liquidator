@@ -2,8 +2,9 @@ autopep8==1.6.0
 flake8==4.0.1
 pytest==7.1.1
 pytest-asyncio==0.18.3
+pytest-cov==3.0.0
 pytest-mock==3.7.0
 python-dotenv==0.20.0
 PyYAML==6.0
-web3==5.28.0
+web3==5.29.2
 git+https://github.com/bevy/redis-namespace.git@38c01cd636e0a85c4a3061683f49a01816fb4c91
