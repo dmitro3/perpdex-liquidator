@@ -52,6 +52,10 @@ class EventIndexer:
                     to_block=to_block,
                 )
                 events += es
+            except KeyboardInterrupt as e:
+                self._logger.warning('KeyboardInterrupt')
+                raise e
+
             except BaseException as exception:
                 self._logger.warning(
                     f'error occured while fetching events: {from_block=} {to_block=}, {current_block=}')
