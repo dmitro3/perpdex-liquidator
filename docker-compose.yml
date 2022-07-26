@@ -32,7 +32,6 @@ services:
       - WEB3_PROVIDER_URI=http://perpdex-hardhat:8545
       - WEB3_NETWORK_NAME=localhost
       - INITIAL_EVENT_BLOCK_NUMBER=0
-      - GAS_PRICE=10
       - PERPDEX_CONTRACT_ABI_JSON_DIRPATH=/app/hardhat/deployments/localhost/
     depends_on:
       redis:
@@ -56,3 +55,14 @@ services:
       timeout: 5s
       retries: 15
       start_period: 30s
+
+  py-shibuya:
+    <<: *py
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - INITIAL_EVENT_BLOCK_NUMBER=1627735
+      - PERPDEX_CONTRACT_ABI_JSON_DIRPATH=deps/perpdex-contract/deployments/shibuya/
+      - USER_PRIVATE_KEY
+      - WEB3_PROVIDER_URI=wss://rpc.shibuya.astar.network
+      - WEB3_NETWORK_NAME=shibuya
+ 
