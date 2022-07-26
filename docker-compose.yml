@@ -70,7 +70,7 @@ services:
     <<: *py
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - INITIAL_EVENT_BLOCK_NUMBER=0
+      - INITIAL_EVENT_BLOCK_NUMBER=574939  # https://zksync2-testnet.zkscan.io/address/0x6d0c6496b82d038307C85073eF67317507e24118/transactions
       - PERPDEX_CONTRACT_ABI_JSON_DIRPATH=deps/perpdex-contract/deployments/zksync2_testnet/
       - USER_PRIVATE_KEY
       - WEB3_PROVIDER_URI=wss://zksync2-testnet.zksync.dev/ws
