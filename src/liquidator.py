@@ -14,7 +14,7 @@ class Liquidator:
     def __init__(self, logger=None) -> None:
         self._logger = getLogger(self.__class__.__name__) if logger is None else logger
 
-        self._w3 = get_w3(
+        self._w3, self._tx_options = get_w3(
             network_name=os.environ['WEB3_NETWORK_NAME'],
             web3_provider_uri=os.environ['WEB3_PROVIDER_URI'],
             user_private_key=os.environ['USER_PRIVATE_KEY'],
@@ -25,7 +25,6 @@ class Liquidator:
             contract=self._perpdex_exchange
         )
 
-        self._gas_price = os.environ['GAS_PRICE']
         self._task: asyncio.Task = None
         
     def health_check(self) -> bool:
@@ -133,6 +132,7 @@ class Liquidator:
             return
    
     def _try_transact(self, func, options: dict = {}) -> bool:
+        options = dict(self._tx_options, **options)  # override options
         try:
             tx_hash = func.transact(options)
         except web3.exceptions.ContractLogicError as e:

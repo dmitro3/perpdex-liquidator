@@ -26,11 +26,12 @@ def w3():
     if os.environ['WEB3_NETWORK_NAME'] not in ('localhost'):
         raise ValueError("Warning: probably wrong environment variables")
 
-    return utils.get_w3(
+    _w3, tx_options = utils.get_w3(
         network_name=os.environ['WEB3_NETWORK_NAME'],
         web3_provider_uri=os.environ['WEB3_PROVIDER_URI'],
         user_private_key=os.environ['USER_PRIVATE_KEY'],
     )
+    return _w3
 
 
 @pytest.fixture

@@ -19,11 +19,16 @@ def get_w3(network_name: str, web3_provider_uri: str, user_private_key: str = No
     if network_name in ['mumbai']:
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
+    eip1559_disbled = 'zksync' in network_name
+    tx_options = {}
+    if eip1559_disbled:
+        tx_options['gasPrice'] = 0
+
     if user_private_key is not None:
         user_account = Account().from_key(user_private_key)
         connect_account(w3, user_account)
 
-    return w3
+    return w3, tx_options
 
 
 def connect_account(w3: web3.Web3, account: Account):

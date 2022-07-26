@@ -14,7 +14,7 @@ with open("main_logger_config.yml", encoding='UTF-8') as f:
 class TestPerpdexEventIndexer:
     @pytest.fixture(autouse=True)
     def setUp(self):
-        w3 = get_w3(
+        w3, tx_options = get_w3(
             network_name=os.environ['WEB3_NETWORK_NAME'],
             web3_provider_uri=os.environ['WEB3_PROVIDER_URI']
         )
