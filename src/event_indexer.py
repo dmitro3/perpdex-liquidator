@@ -21,15 +21,19 @@ class EventIndexer:
     ) -> None:
         self._contract = contract
 
+        web3_network_name = os.environ['WEB3_NETWORK_NAME']
         self._redis_client = StrictRedis.from_url(
             os.environ['REDIS_URL'],
-            namespace='{}:{}:'.format(os.environ['WEB3_NETWORK_NAME'], self.__class__.__name__),
+            namespace='{}:{}:'.format(web3_network_name, self.__class__.__name__),
         ) if redis_client is None else redis_client
 
         start_block_number = int(
             os.environ['INITIAL_EVENT_BLOCK_NUMBER']) if start_block_number is None else start_block_number
         self._last_block_number = start_block_number - 1
-        self._get_logs_limit = 1000 if get_logs_limit is None else get_logs_limit
+        if get_logs_limit is None:
+            self._get_logs_limit = 100 if web3_network_name in ['zksync2_testnet'] else 1000
+        else:
+            self._get_logs_limit = get_logs_limit
 
         self._logger = getLogger(self.__class__.__name__) if logger is None else logger
 
