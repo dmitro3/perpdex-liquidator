@@ -10,7 +10,11 @@ MAX_UINT: int = int(web3.constants.MAX_INT, base=16)
 
 
 def get_w3(network_name: str, web3_provider_uri: str, user_private_key: str = None):
-    w3 = Web3(Web3.HTTPProvider(web3_provider_uri))
+    if web3_provider_uri.startswith('wss://'):
+        provider = Web3.WebsocketProvider(web3_provider_uri)
+    else:
+        provider = Web3.HTTPProvider(web3_provider_uri)
+    w3 = Web3(provider)
 
     if network_name in ['mumbai']:
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
