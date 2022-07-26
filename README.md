@@ -1,13 +1,23 @@
 # perpdex-liquidator
 
-## Contribution
+An liquidator bot program for perpdex.
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md)
+Supported chain
 
-## Development
+- shibuya (astar testnet)
+- zksync2-testnet (zksync testnet)
 
-### mumbai
+## Setup
 
-```
-$ USER_PRIVATE_KEY=your-key docker compose run --rm py-mumbai python main.py
+see: https://github.com/perpdex/perpdex-arbitrager#setup
+
+## How to run liquidator
+```bash
+git submodule update --init --recursive
+
+# run liquidator(shibuya)
+docker-compose run --rm py-shibuya python main.py
+
+# run liquidator(zksync2 testnet)
+docker-compose run --rm py-zksync2-testnet python main.py
 ```
