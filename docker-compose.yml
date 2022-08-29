@@ -22,7 +22,7 @@ services:
   redis:
     image: redis:6.2.6
     volumes:
-      - './config/redis.conf:/usr/local/etc/redis/redis.conf:ro'
+      - "./config/redis.conf:/usr/local/etc/redis/redis.conf:ro"
 
   py-hardhat:
     <<: *py
@@ -38,7 +38,7 @@ services:
         condition: service_started
       perpdex-hardhat:
         condition: service_healthy
-    
+
   perpdex-hardhat:
     build:
       context: ./hardhat
@@ -48,7 +48,7 @@ services:
       - ./deps:/deps
     command: sh -c "yarn install && yarn hardhat node"
     expose:
-      - 8545  # hardhat localhost default port
+      - 8545 # hardhat localhost default port
     healthcheck:
       test: curl -f http://localhost:8545 || exit 1
       interval: 3s
@@ -65,12 +65,12 @@ services:
       - USER_PRIVATE_KEY
       - WEB3_PROVIDER_URI=wss://rpc.shibuya.astar.network
       - WEB3_NETWORK_NAME=shibuya
- 
+
   py-zksync2-testnet:
     <<: *py
     environment:
       - REDIS_URL=redis://redis:6379/0
-      - INITIAL_EVENT_BLOCK_NUMBER=574939  # https://zksync2-testnet.zkscan.io/address/0x6d0c6496b82d038307C85073eF67317507e24118/transactions
+      - INITIAL_EVENT_BLOCK_NUMBER=574939 # https://zksync2-testnet.zkscan.io/address/0x6d0c6496b82d038307C85073eF67317507e24118/transactions
       - PERPDEX_CONTRACT_ABI_JSON_DIRPATH=deps/perpdex-contract/deployments/zksync2_testnet/
       - USER_PRIVATE_KEY
       - WEB3_PROVIDER_URI=wss://zksync2-testnet.zksync.dev/ws
